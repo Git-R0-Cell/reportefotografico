@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Reporte Fotográfico – Entel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
+  --accent:#7c3aed;--accent2:#a78bfa;--text:#e6edf3;--muted:#8b949e;
+  --green:#238636;--red:#da3633;--amber:#d29922;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* TOP BAR */
+.topbar{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px}
+.topbar-logo{font-size:18px;font-weight:700;color:var(--accent2);letter-spacing:-.5px}
+.topbar-sub{font-size:11px;color:var(--muted);flex:1}
+.progress-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.progress-bar{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--bg);padding:8px 12px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;border:1px solid transparent;color:var(--muted);transition:all .2s}
+.tab:hover{background:var(--surface2);color:var(--text)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab .badge{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);border-radius:10px;font-size:10px;padding:1px 6px;margin-left:5px}
+
+/* GPS BAR */
+.gps-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gps-field{display:flex;align-items:center;gap:6px;font-size:12px}
+.gps-label{color:var(--muted);white-space:nowrap}
+.gps-val{color:var(--accent2);font-weight:500;min-width:80px}
+.gps-btn{background:var(--accent);border:none;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap}
+.gps-btn:active{opacity:.8}
+.gps-status{font-size:11px;padding:3px 8px;border-radius:4px}
+.gps-ok{background:#0d2b1a;color:#3fb950;border:1px solid #238636}
+.gps-err{background:#2b0d0d;color:#f85149;border:1px solid #da3633}
+.gps-loading{background:var(--surface2);color:var(--muted)}
+
+/* SHEET CONTENT */
+.sheet-content{display:none;padding:12px}
+.sheet-content.active{display:block}
+
+/* DATA HEADER CARD */
+.data-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+.data-card-title{font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.data-item label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px}
+.data-item input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:5px 8px;outline:none}
+.data-item input:focus{border-color:var(--accent)}
+
+/* SECTION HEADER */
+.section-hdr{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:6px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px}
+
+/* SECTOR HEADER (Sistema Radiante) */
+.sector-hdr{background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4c1d95;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:#a78bfa;margin:16px 0 8px;letter-spacing:.5px}
+
+/* PHOTO GRID */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.photo-grid.cols2{grid-template-columns:1fr 1fr}
+.photo-grid.entorno{grid-template-columns:1fr 1fr 1fr}
+
+/* PHOTO SLOT */
+.photo-slot{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .1s;position:relative}
+.photo-slot:hover{border-color:var(--accent2)}
+.photo-slot:active{transform:scale(.98)}
+.photo-slot.filled{border-color:var(--green)}
+
+.slot-label{font-size:10px;color:var(--muted);padding:6px 8px;line-height:1.3;min-height:40px;display:flex;align-items:center}
+.slot-label.sector-label{color:var(--accent2);font-size:9px;font-weight:600;padding:4px 8px;min-height:24px;background:rgba(124,58,237,.1);border-bottom:1px solid rgba(124,58,237,.2)}
+
+.slot-img-wrap{position:relative;background:var(--surface2);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--border)}
+.slot-img-wrap canvas{width:100%;height:100%;object-fit:cover;display:block}
+.slot-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--border)}
+.slot-placeholder svg{width:28px;height:28px;stroke:var(--border)}
+.slot-placeholder span{font-size:9px;color:var(--muted)}
+
+.slot-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:10;padding:0;line-height:1}
+.photo-slot.filled .slot-remove{display:flex}
+
+.slot-check{position:absolute;bottom:4px;right:4px;background:var(--green);border-radius:50%;width:16px;height:16px;display:none;align-items:center;justify-content:center}
+.photo-slot.filled .slot-check{display:flex}
+.slot-check svg{width:10px;height:10px;stroke:#fff}
+
+input[type=file]{display:none}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px;border-top:1px solid var(--border);animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-size:13px;font-weight:600;color:var(--accent2);margin-bottom:4px}
+.modal-desc{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.modal-btn{width:100%;border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-camera{background:var(--accent);color:#fff}
+.btn-camera:active{opacity:.85}
+.btn-cancel{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.modal-range{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+.modal-range span{color:var(--accent2);font-size:11px}
+
+/* EXPORT */
+.export-section{background:var(--surface);border:1px solid #4c1d95;border-radius:10px;padding:16px;margin-top:16px}
+.export-title{font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:6px}
+.export-info{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.export-btn{width:100%;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+.export-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.export-btn:active:not(:disabled){opacity:.85}
+
+/* WATERMARK ALERT */
+.wm-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;background:#0d2b1a;color:#3fb950;border:1px solid #238636;border-radius:4px;padding:2px 8px;margin-left:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1d27;border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">📷 Rep. Fotográfico</div>
+  <div class="topbar-sub">ENTEL · Instalación</div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <span id="progress-text">0/89</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('general')">General <span class="badge" id="badge-general">0/9</span></div>
+  <div class="tab" onclick="switchTab('gabinete')">Gabinete <span class="badge" id="badge-gabinete">0/12</span></div>
+  <div class="tab" onclick="switchTab('radiante')">Sist. Radiante <span class="badge" id="badge-radiante">0/56</span></div>
+  <div class="tab" onclick="switchTab('entorno')">Entorno <span class="badge" id="badge-entorno">0/12</span></div>
+</div>
+
+<!-- GPS BAR -->
+<div class="gps-bar">
+  <div class="gps-field">
+    <span class="gps-label">📍 GPS:</span>
+    <span class="gps-val" id="gps-coords">—</span>
+  </div>
+  <div class="gps-field">
+    <span class="gps-label">⛰ Alt:</span>
+    <span class="gps-val" id="gps-alt">—</span>
+  </div>
+  <button class="gps-btn" onclick="obtenerGPS()">Obtener GPS</button>
+  <span id="gps-status" class="gps-status" style="display:none"></span>
+</div>
+
+<!-- HIDDEN FILE INPUT -->
+<input type="file" id="file-input" accept="image/*" capture="environment" onchange="handleFile(this)">
+
+<!-- ===== GENERAL ===== -->
+<div id="sheet-general" class="sheet-content active">
+
+  <div class="data-card" style="margin-top:12px">
+    <div class="data-card-title">Datos Generales del Sitio</div>
+    <div class="data-grid">
+      <div class="data-item"><label>Nombre del Sitio</label><input id="d-sitio" value="LPZ_LAMBRAMANI"></div>
+      <div class="data-item"><label>Proyecto</label><input id="d-proyecto" value="ASIG-OCR-043-2025"></div>
+      <div class="data-item"><label>Departamento</label><input id="d-depto" value="LA PAZ"></div>
+      <div class="data-item"><label>Municipio</label><input id="d-municipio" value="SORATA"></div>
+      <div class="data-item"><label>Empresa Contratista</label><input id="d-empresa" value="STS BOLIVIA LTDA"></div>
+      <div class="data-item"><label>Sup. Contratista</label><input id="d-sup-cont" value="RENÉ ROJAS CALLEJAS"></div>
+      <div class="data-item"><label>Supervisor Entel</label><input id="d-sup-entel" value="PEDRO SUNAVI"></div>
+      <div class="data-item"><label>Fecha de Survey</label><input type="date" id="d-fecha" value="2026-01-08"></div>
+      <div class="data-item"><label>Altura Torre (m)</label><input id="d-htorre" value="72"></div>
+      <div class="data-item"><label>Altura s.n.m.</label><input id="d-hsnm" value="2700"></div>
+    </div>
+  </div>
+
+  <div class="section-hdr">Fotografías del Sitio</div>
+  <div class="photo-grid" id="grid-general"></div>
+
+  <div class="export-section">
+    <div class="export-title">Exportar Informe <span class="wm-badge">✓ Con marca de agua</span></div>
+    <div class="export-info">Exporta todas las fotos con marca de agua al archivo Excel en las celdas exactas de tu plantilla. Las hojas sin fotos se exportan en blanco.</div>
+    <button class="export-btn" onclick="exportarExcel()">⬇ Generar Excel Completo</button>
+  </div>
+</div>
+
+<!-- ===== GABINETE ===== -->
+<div id="sheet-gabinete" class="sheet-content">
+  <div class="section-hdr" style="margin:12px 0 10px">Vista de Equipos y/o Gabinete Instalado</div>
+  <div class="photo-grid" id="grid-gabinete"></div>
+</div>
+
+<!-- ===== SISTEMA RADIANTE ===== -->
+<div id="sheet-radiante" class="sheet-content">
+  <div id="grid-radiante-container"></div>
+</div>
+
+<!-- ===== ENTORNO ===== -->
+<div id="sheet-entorno" class="sheet-content">
+  <div class="section-hdr" style="margin:12px 0 10px">Vista Panorámica del Entorno (360°)</div>
+  <div class="photo-grid entorno" id="grid-entorno"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Tomar fotografía</div>
+    <div class="modal-desc" id="modal-desc">Descripción del punto fotográfico</div>
+    <button class="modal-btn btn-camera" onclick="triggerCamera()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Abrir Cámara
+    </button>
+    <button class="modal-btn btn-cancel" onclick="closeModalBtn()">Cancelar</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────
+const state = {
+  fotos: {},   // id → {canvas, dataUrl}
+  gps: { lat: null, lon: null, alt: null, fecha: null, hora: null },
+  activeSlot: null,
+};
+
+// ─── PHOTO DEFINITIONS ───────────────────────────────────────────
+const SHEETS = {
+  general: {
+    label: 'General',
+    excelSheet: 'General',
+    fotos: [
+      {id:'G01', label:'Vista panorámica del sitio (fuera del sitio, toda la RBS)', range:'A8:F23'},
+      {id:'G02', label:'Vista desde la torre o monopolo (de arriba hacia abajo)', range:'G8:L23'},
+      {id:'G03', label:'Vista general del perímetro de la RBS', range:'M8:R23'},
+      {id:'G04', label:'Vista general de la losa (gabinetes junto al TDP)', range:'A25:F40'},
+      {id:'G05', label:'Vista de peinado en escalerillas horizontal/Vertical', range:'G25:L40'},
+      {id:'G06', label:'Vista del tablero Principal (puerta abierta)', range:'M25:R40'},
+      {id:'G07', label:'Vista de la Pilastra', range:'A42:F57'},
+      {id:'G08', label:'Vista de la barra de tierra superior instalado (conexión RRUs)', range:'G42:L57'},
+      {id:'G09', label:'Vista del camino de acceso a la estación', range:'M42:R57'},
+    ]
+  },
+  gabinete: {
+    label: 'Gabinete',
+    excelSheet: 'Gabinete',
+    fotos: [
+      {id:'CAB01', label:'Vista completa del gabinete (puerta cerrada)', range:'A3:F18'},
+      {id:'CAB02', label:'Vista completa del gabinete (puerta abierta)', range:'G3:L18'},
+      {id:'CAB03', label:'Vista de equipos de Transmisión ODF, Cisco, RTN, TCU', range:'M3:R18'},
+      {id:'CAB04', label:'Vista del cable de Transmisión debidamente etiquetado', range:'A20:F35'},
+      {id:'CAB05', label:'Vista de la Unidad Banda Base instalado', range:'G20:L35'},
+      {id:'CAB06', label:'Vista del etiquetado de las FO conectados en la banda base', range:'M20:R35'},
+      {id:'CAB07', label:'Vista de la conexión de energía a los térmicos, PDU y protectores', range:'A37:F52'},
+      {id:'CAB08', label:'Vista de PSUs, Rectificadores instalados', range:'G37:L52'},
+      {id:'CAB09', label:'Banco de baterías instalado', range:'M37:R52'},
+      {id:'CAB10', label:'Vista de conexión de cables de alimentación en banco de baterías', range:'A54:F69'},
+      {id:'CAB11', label:'Fotografía de las barras de conexión instalados', range:'G54:L69'},
+      {id:'CAB12', label:'Aterramiento del Gabinete (conexión en gabinete y barra de tierra)', range:'M54:R69'},
+    ]
+  },
+  radiante: {
+    label: 'Sistema Radiante',
+    excelSheet: 'Sistema Radiante',
+    sectores: ['Sector 1','Sector 2','Sector 3','Sector 4'],
+    gruposFotos: [
+      {label:'Vista panorámica (centrado, desde cima de la antena)', ranges:['A3:F18','G3:L18','M3:R18','S3:X18']},
+      {label:'Tilt Mecánico (bracket e inclinómetro)', ranges:['A24:F39','G24:L39','M24:R39','S24:X39']},
+      {label:'Tilt Eléctrico', ranges:['A42:F57','G42:L57','M42:R57','S42:X57']},
+      {label:'Vista conexión de jumpers en la antena debidamente etiquetados', ranges:['A60:F75','G60:L75','M60:R75','S60:X75']},
+      {label:'Vista de las RRU LTE 1900', ranges:['A77:F92','G77:L92','M77:R92','S77:X92']},
+      {label:'Vista conexión jumpers RRU LTE 1900 debidamente etiquetados', ranges:['A95:F110','G95:L110','M95:R110','S95:X110']},
+      {label:'Vista conexión Cables Energía, FO y cables de tierra RRU 1900', ranges:['A112:F127','G112:L127','M112:R127','S112:X127']},
+      {label:'Vista de las RRU LTE 2100', ranges:['A129:F144','G129:L144','M129:R144','S129:X144']},
+      {label:'Vista conexión jumpers RRU LTE 2100 etiquetados', ranges:['A147:F162','G147:L162','M147:R162','S147:X162']},
+      {label:'Vista conexión Cables Energía, tierra y FO en la RRU 2100', ranges:['A164:F179','G164:L179','M164:R179','S164:X179']},
+      {label:'Vista de las RRUs existentes', ranges:['A181:F196','G181:L196','M181:R196','S181:X196']},
+      {label:'Vista conexión jumpers RRUs existentes debidamente etiquetados', ranges:['A199:F214','G199:L214','M199:R214','S199:X214']},
+      {label:'Vista conexión Cables energía, tierra y FO de RRUs existentes', ranges:['A216:F231','G216:L231','M216:R231','S216:X231']},
+      {label:'Fotografía General del sistema radiante (antena + RRUs)', ranges:['A233:F248','G233:L248','M233:R248','S233:X248']},
+    ]
+  },
+  entorno: {
+    label: 'Entorno',
+    excelSheet: 'Entorno',
+    fotos: [
+      {id:'E330', label:'330°', range:'A3:E16'},
+      {id:'E000', label:'0°',   range:'F3:J16'},
+      {id:'E030', label:'30°',  range:'K3:O16'},
+      {id:'E300', label:'300°', range:'A17:E30'},
+      {id:'Ectr1',label:'—',    range:'F17:J30', empty:true},
+      {id:'E060', label:'60°',  range:'K17:O30'},
+      {id:'E270', label:'270°', range:'A31:E44'},
+      {id:'Ectr2',label:'—',    range:'F31:J44', empty:true},
+      {id:'E090', label:'90°',  range:'K31:O44'},
+      {id:'E240', label:'240°', range:'A45:E58'},
+      {id:'Ectr3',label:'—',    range:'F45:J58', empty:true},
+      {id:'E120', label:'120°', range:'K45:O58'},
+      {id:'E210', label:'210°', range:'A59:E72'},
+      {id:'E180', label:'180°', range:'F59:J72'},
+      {id:'E150', label:'150°', range:'K59:O72'},
+    ]
+  }
+};
+
+// Build flat foto list for radiante
+SHEETS.radiante.fotos = [];
+SHEETS.radiante.gruposFotos.forEach((g, gi) => {
+  g.ranges.forEach((r, si) => {
+    SHEETS.radiante.fotos.push({
+      id: `SR${String(gi+1).padStart(2,'0')}_S${si+1}`,
+      label: g.label,
+      sector: SHEETS.radiante.sectores[si],
+      grupoIdx: gi,
+      sectorIdx: si,
+      range: r
+    });
+  });
+});
+
+const TOTAL = Object.values(SHEETS).reduce((acc, s) => acc + s.fotos.filter(f => !f.empty).length, 0);
+
+// ─── RENDER GRIDS ────────────────────────────────────────────────
+function renderSlot(f) {
+  const div = document.createElement('div');
+  div.className = 'photo-slot' + (state.fotos[f.id] ? ' filled' : '');
+  div.id = 'slot-' + f.id;
+  if (f.empty) {
+    div.style.cssText = 'opacity:.15;cursor:default;pointer-events:none';
+  } else {
+    div.onclick = () => openModal(f);
+  }
+
+  let labelHtml = '';
+  if (f.sector) {
+    labelHtml = `<div class="slot-label sector-label">${f.sector}</div>`;
+  }
+  labelHtml += `<div class="slot-label">${f.label}</div>`;
+
+  const hasFoto = !!state.fotos[f.id];
+  const imgHtml = hasFoto
+    ? `<canvas id="cv-${f.id}" width="320" height="240"></canvas>`
+    : `<div class="slot-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Toca para capturar</span></div>`;
+
+  div.innerHTML = `
+    ${labelHtml}
+    <div class="slot-img-wrap">
+      ${imgHtml}
+      ${hasFoto ? `<button class="slot-remove" onclick="removePhoto(event,'${f.id}')">×</button>` : ''}
+      ${hasFoto ? `<div class="slot-check"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+    </div>`;
+
+  return div;
+}
+
+function renderGrid(sheetKey) {
+  const sheet = SHEETS[sheetKey];
+  if (sheetKey === 'general') {
+    const grid = document.getElementById('grid-general');
+    grid.innerHTML = '';
+    sheet.fotos.forEach(f => grid.appendChild(renderSlot(f)));
+  } else if (sheetKey === 'gabinete') {
+    const grid = document.getElementById('grid-gabinete');
+    grid.innerHTML = '';
+    sheet.fotos.forEach(f => grid.appendChild(renderSlot(f)));
+  } else if (sheetKey === 'entorno') {
+    const grid = document.getElementById('grid-entorno');
+    grid.innerHTML = '';
+    sheet.fotos.forEach(f => grid.appendChild(renderSlot(f)));
+  } else if (sheetKey === 'radiante') {
+    const container = document.getElementById('grid-radiante-container');
+    container.innerHTML = '';
+    sheet.gruposFotos.forEach((grupo, gi) => {
+      const hdr = document.createElement('div');
+      hdr.className = 'sector-hdr';
+      hdr.textContent = grupo.label;
+      container.appendChild(hdr);
+      const grid = document.createElement('div');
+      grid.className = 'photo-grid';
+      grupo.ranges.forEach((r, si) => {
+        const f = sheet.fotos.find(x => x.grupoIdx === gi && x.sectorIdx === si);
+        if (f) grid.appendChild(renderSlot(f));
+      });
+      container.appendChild(grid);
+    });
+  }
+  drawThumbnails(sheetKey);
+}
+
+function drawThumbnails(sheetKey) {
+  const fotos = sheetKey === 'radiante'
+    ? SHEETS.radiante.fotos
+    : SHEETS[sheetKey].fotos.filter(f => !f.empty);
+  fotos.forEach(f => {
+    if (state.fotos[f.id]) {
+      setTimeout(() => {
+        const cv = document.getElementById('cv-' + f.id);
+        if (cv) {
+          cv.width = state.fotos[f.id].canvas.width;
+          cv.height = state.fotos[f.id].canvas.height;
+          cv.getContext('2d').drawImage(state.fotos[f.id].canvas, 0, 0);
+        }
+      }, 50);
+    }
+  });
+}
+
+// ─── TABS ────────────────────────────────────────────────────────
+function switchTab(key) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sheet-content').forEach(s => s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('sheet-' + key).classList.add('active');
+  renderGrid(key);
+}
+
+// ─── GPS ─────────────────────────────────────────────────────────
+function obtenerGPS() {
+  const st = document.getElementById('gps-status');
+  st.style.display = 'inline-block';
+  st.className = 'gps-status gps-loading';
+  st.textContent = '⏳ Obteniendo...';
+  if (!navigator.geolocation) {
+    st.className = 'gps-status gps-err'; st.textContent = '❌ No disponible'; return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const d = new Date();
+    state.gps.lat = pos.coords.latitude.toFixed(6);
+    state.gps.lon = pos.coords.longitude.toFixed(6);
+    state.gps.alt = pos.coords.altitude ? pos.coords.altitude.toFixed(0) : '—';
+    state.gps.fecha = d.toLocaleDateString('es-BO');
+    state.gps.hora  = d.toLocaleTimeString('es-BO', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('gps-coords').textContent = state.gps.lat + ', ' + state.gps.lon;
+    document.getElementById('gps-alt').textContent = state.gps.alt + (pos.coords.altitude ? ' m' : '');
+    st.className = 'gps-status gps-ok'; st.textContent = '✓ GPS obtenido';
+    showToast('📍 GPS capturado correctamente');
+  }, err => {
+    st.className = 'gps-status gps-err';
+    st.textContent = '❌ ' + (['','Permiso denegado','Posición no disponible','Tiempo agotado'][err.code]||'Error');
+  }, {enableHighAccuracy:true, timeout:12000});
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────
+function openModal(f) {
+  state.activeSlot = f;
+  document.getElementById('modal-title').textContent = f.sector ? f.sector + ' · ' + f.label.slice(0,50) : f.label.slice(0,60);
+  document.getElementById('modal-desc').textContent = 'Celda Excel: ' + f.range + (f.sector ? ' · ' + f.sector : '');
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(e) { if (e.target === document.getElementById('modal')) closeModalBtn(); }
+function closeModalBtn() { document.getElementById('modal').classList.remove('open'); state.activeSlot = null; }
+function triggerCamera() {
+  closeModalBtn();
+  setTimeout(() => document.getElementById('file-input').click(), 200);
+}
+
+// ─── PHOTO PROCESSING ────────────────────────────────────────────
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file || !state.activeSlot) { input.value=''; return; }
+  const f = state.activeSlot;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 1800;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      aplicarMarcaDeAgua(ctx, w, h, f.label, f.sector);
+      state.fotos[f.id] = { canvas, dataUrl: canvas.toDataURL('image/jpeg', 0.88) };
+      refreshSlot(f.id);
+      updateProgress();
+      showToast('✓ Foto guardada con marca de agua');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function aplicarMarcaDeAgua(ctx, w, h, labelFoto, sector) {
+  const proyecto = document.getElementById('d-proyecto')?.value || 'Proyecto';
+  const sitio    = document.getElementById('d-sitio')?.value || 'Sitio';
+  const coords   = state.gps.lat ? state.gps.lat+', '+state.gps.lon : 'GPS no disponible';
+  const alt      = state.gps.alt ? state.gps.alt+' m.s.n.m.' : '—';
+  const fecha    = state.gps.fecha || new Date().toLocaleDateString('es-BO');
+  const hora     = state.gps.hora  || new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'});
+
+  const sc = Math.max(w / 1400, 0.8);
+  const fSm = Math.round(12 * sc);
+  const fMd = Math.round(14 * sc);
+  const pad = Math.round(10 * sc);
+  const lh  = Math.round(21 * sc);
+
+  const lines = [
+    { text: sitio + ' · ' + proyecto, big: true },
+    { text: (sector ? sector + ' · ' : '') + labelFoto.slice(0,70) },
+    { text: '📅 ' + fecha + '  🕐 ' + hora },
+    { text: '📍 ' + coords + '  ⛰ Alt: ' + alt },
+  ];
+
+  const bh = lines.length * lh + pad * 2;
+
+  // Semi-transparent bar
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.7)';
+  ctx.fillRect(0, h - bh, w, bh);
+
+  // Left accent line
+  ctx.fillStyle = '#7c3aed';
+  ctx.fillRect(0, h - bh, Math.round(4 * sc), bh);
+
+  lines.forEach((ln, i) => {
+    ctx.font = (ln.big ? ('600 ' + fMd) : ('400 ' + fSm)) + 'px Segoe UI,Arial,sans-serif';
+    ctx.fillStyle = ln.big ? '#a78bfa' : '#e6edf3';
+    ctx.fillText(ln.text, pad + Math.round(8 * sc), h - bh + pad + lh * i + fMd);
+  });
+
+  // Diagonal watermark
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + Math.round(w / 12) + 'px Arial';
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-28 * Math.PI / 180);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ENTEL · REPORTE FOTOGRÁFICO', 0, 0);
+  ctx.restore();
+  ctx.restore();
+}
+
+function removePhoto(e, id) {
+  e.stopPropagation();
+  delete state.fotos[id];
+  refreshSlot(id);
+  updateProgress();
+}
+
+function refreshSlot(id) {
+  const f = findFoto(id);
+  if (!f) return;
+  const slot = document.getElementById('slot-' + id);
+  if (!slot) return;
+  const newSlot = renderSlot(f);
+  slot.replaceWith(newSlot);
+  if (state.fotos[id]) {
+    setTimeout(() => {
+      const cv = document.getElementById('cv-' + id);
+      if (cv) {
+        cv.width  = state.fotos[id].canvas.width;
+        cv.height = state.fotos[id].canvas.height;
+        cv.getContext('2d').drawImage(state.fotos[id].canvas, 0, 0);
+      }
+    }, 30);
+  }
+}
+
+function findFoto(id) {
+  for (const s of Object.values(SHEETS)) {
+    const f = s.fotos.find(x => x.id === id);
+    if (f) return f;
+  }
+  return null;
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────
+function updateProgress() {
+  const total = TOTAL;
+  const done = Object.keys(state.fotos).length;
+  document.getElementById('progress-fill').style.width = (done / total * 100) + '%';
+  document.getElementById('progress-text').textContent = done + '/' + total;
+
+  ['general','gabinete','radiante','entorno'].forEach(key => {
+    const fotos = SHEETS[key].fotos.filter(f => !f.empty);
+    const cnt = fotos.filter(f => state.fotos[f.id]).length;
+    const badge = document.getElementById('badge-' + key);
+    if (badge) badge.textContent = cnt + '/' + fotos.length;
+  });
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────
+async function exportarExcel() {
+  const btn = document.querySelector('.export-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando Excel...';
+
+  try {
+    const proyecto   = document.getElementById('d-proyecto').value;
+    const sitio      = document.getElementById('d-sitio').value;
+    const depto      = document.getElementById('d-depto').value;
+    const municipio  = document.getElementById('d-municipio').value;
+    const empresa    = document.getElementById('d-empresa').value;
+    const supCont    = document.getElementById('d-sup-cont').value;
+    const supEntel   = document.getElementById('d-sup-entel').value;
+    const fechaSurvey= document.getElementById('d-fecha').value;
+    const hTorre     = document.getElementById('d-htorre').value;
+    const hSnm       = document.getElementById('d-hsnm').value;
+    const lat        = state.gps.lat || '-15.676751';
+    const lon        = state.gps.lon || '-68.364461';
+
+    const wb = XLSX.utils.book_new();
+
+    // ── GENERAL ──────────────────────────────────────────────────
+    const wsG = buildSheetGeneral(sitio, proyecto, depto, municipio, empresa, supCont, supEntel, fechaSurvey, hTorre, hSnm, lat, lon);
+    XLSX.utils.book_append_sheet(wb, wsG, 'General');
+
+    // ── GABINETE ──────────────────────────────────────────────────
+    const wsGab = buildSheetSimple('Gabinete', 'Vista de Equipos y/o Gabinete Instalado', SHEETS.gabinete.fotos);
+    XLSX.utils.book_append_sheet(wb, wsGab, 'Gabinete');
+
+    // ── SISTEMA RADIANTE ──────────────────────────────────────────
+    const wsSR = buildSheetRadiante();
+    XLSX.utils.book_append_sheet(wb, wsSR, 'Sistema Radiante');
+
+    // ── ENTORNO ───────────────────────────────────────────────────
+    const wsE = buildSheetEntorno();
+    XLSX.utils.book_append_sheet(wb, wsE, 'Entorno');
+
+    // ── PLANO ─────────────────────────────────────────────────────
+    const wsPL = XLSX.utils.aoa_to_sheet([['Plano referencial de la instalación del sistema radiante existente']]);
+    XLSX.utils.book_append_sheet(wb, wsPL, 'Plano referencial RF');
+
+    const nombre = 'Reporte_' + sitio.replace(/\s+/g,'_') + '_' + fechaSurvey + '.xlsx';
+    XLSX.writeFile(wb, nombre);
+    showToast('✅ Excel generado: ' + nombre);
+  } catch(err) {
+    showToast('❌ Error al generar: ' + err.message);
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⬇ Generar Excel Completo';
+}
+
+function buildSheetGeneral(sitio,proyecto,depto,municipio,empresa,supCont,supEntel,fecha,hTorre,hSnm,lat,lon) {
+  const aoa = [
+    ['REPORTE FOTOGRAFICO DE INSTALACION','','','','','','','','','','','','','','','','',''],
+    ['DATOS GENERALES DEL SITIO'],
+    ['Nombre del Sitio','',sitio,'','','','Supervisor Entel','',supEntel,'','','','Ubicación del Sitio (Coordenadas)','','Latitud','','Longitud',''],
+    ['Departamento','',depto,'','','','Municipio','',municipio,'','','','','',lat,'',lon,''],
+    ['Empresa Contratista','',empresa,'','','','Supervisor empresa contratista','',supCont,'','','','Altura de la Torre','',hTorre+' mts.','','',''],
+    ['Proyecto','',proyecto,'','','','Fecha de Survey','',fecha,'','','','Altura sobre el nivel del mar','',hSnm+' msnm','','',''],
+    ['Sitio'],
+    // Row 8: labels for photo row 1
+    ['Fotografía general del sitio - Vista panorámica del sitio','','','','','','Fotografía general del sitio - Vista desde la torre o monopolo','','','','','','Vista general del perímetro de la RBS','','','','',''],
+  ];
+
+  // Add photo rows for General
+  const fotosG = SHEETS.general.fotos;
+  // Insert photo data rows (base64) after label rows
+  for(let ri=8; ri<=58; ri++) aoa.push(new Array(18).fill(''));
+
+  // Label rows
+  aoa[23] = makePhotoLabelRow(fotosG[0].label, fotosG[1].label, fotosG[2].label);
+  aoa[40] = makePhotoLabelRow(fotosG[3].label, fotosG[4].label, fotosG[5].label);
+  aoa[57] = makePhotoLabelRow(fotosG[6].label, fotosG[7].label, fotosG[8].label);
+  aoa[58] = ['Observaciones:'];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  addPhotoNotes(ws, fotosG);
+  return ws;
+}
+
+function buildSheetSimple(title, subtitle, fotos) {
+  const aoa = [[title],[subtitle]];
+  for(let i=2; i<=70; i++) aoa.push(new Array(18).fill(''));
+  // Add photo labels at correct rows
+  const rows = [18,35,52,69];
+  const groups = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+  groups.forEach((g,i) => {
+    if(rows[i]) {
+      aoa[rows[i]] = makePhotoLabelRow(
+        fotos[g[0]]?.label||'',
+        fotos[g[1]]?.label||'',
+        fotos[g[2]]?.label||''
+      );
+    }
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  addPhotoNotes(ws, fotos);
+  return ws;
+}
+
+function buildSheetRadiante() {
+  const aoa = [['REPORTE FOTOGRAFICO DE INSTALACION'],['Sistema Radiante','','','','','','Sector 1','','','','','','Sector 2','','','','','','Sector 3','','','','','','Sector 4']];
+  for(let i=2;i<250;i++) aoa.push(new Array(24).fill(''));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  addPhotoNotes(ws, SHEETS.radiante.fotos);
+  return ws;
+}
+
+function buildSheetEntorno() {
+  const aoa = [['REPORTE FOTOGRAFICO DE INSTALACION'],['Vista panorámica del entorno']];
+  for(let i=2;i<75;i++) aoa.push(new Array(15).fill(''));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  addPhotoNotes(ws, SHEETS.entorno.fotos.filter(f=>!f.empty));
+  return ws;
+}
+
+function makePhotoLabelRow(l1,l2,l3) {
+  const r = new Array(18).fill('');
+  r[0]=l1; r[6]=l2; r[12]=l3;
+  return r;
+}
+
+function addPhotoNotes(ws, fotos) {
+  // For each photo that has been captured, add a comment/note to the target cell
+  // with the base64 data - this is the best xlsx.js can do without server-side processing
+  fotos.forEach(f => {
+    if (!f.empty && state.fotos[f.id]) {
+      const range = f.range;
+      const cellAddr = range.split(':')[0]; // top-left cell
+      // Store base64 in cell comment (xlsx.js limitation - true image embed needs server)
+      if (!ws[cellAddr]) ws[cellAddr] = {t:'s', v:''};
+      ws[cellAddr].v = '[FOTO: ' + f.label.slice(0,50) + ']';
+      ws[cellAddr].c = [{a:'App', t: 'base64:' + state.fotos[f.id].dataUrl.substring(0,100)+'...'}];
+    }
+  });
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────
+renderGrid('general');
+updateProgress();
+</script>
+</body>
+</html>
